@@ -10,7 +10,7 @@
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/ai-assistant-pro.git
+git clone https://github.com/Vishu663/ai-assistant-pro.git
 cd ai-assistant-pro
 ```
 
@@ -25,7 +25,7 @@ yarn install
 3. Create a `.env.local` file in the root directory and add your AI API keys:
 
 ```
-AI_API_KEY=your_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 4. Run the development server:
@@ -41,30 +41,35 @@ yarn dev
 ## 🔧 Customization
 
 ### Connecting to AI APIs
-To connect to your preferred AI service, modify the `/app/api/chat/route.ts` file:
+To connect to Google's Gemini AI service, modify the `/app/api/chat/route.ts` file:
 
 ```typescript
-// Example for OpenAI integration
-import { Configuration, OpenAIApi } from 'openai';
-
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
+// Gemini AI integration
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
     const { message, history } = await request.json();
     
-    const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        ...history,
-        { role: "user", content: message }
-      ],
+    // Initialize Gemini API
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    
+    // Convert history format to Gemini's expected format
+    const formattedHistory = history.map(msg => ({
+      role: msg.role,
+      parts: [{ text: msg.content }]
+    }));
+    
+    // Start a chat session
+    const chat = model.startChat({
+      history: formattedHistory,
     });
     
-    const response = completion.data.choices[0].message?.content || "Sorry, I couldn't generate a response";
+    // Send message and get response
+    const result = await chat.sendMessage(message);
+    const response = result.response.text();
     
     return NextResponse.json({ response });
   } catch (error) {
